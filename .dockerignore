@@ -1,0 +1,8 @@
+node_modules/
+auth/
+.git
+*.md
+GUIA.docx
+GUIA.doc
+index.js.txt
+ids.txt

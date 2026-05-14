@@ -1,0 +1,197 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="UTF-8">
+<title>GUIA COMPLETA DEL BOT DE WHATSAPP</title>
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 40px; }
+h1 { font-size: 20pt; color: #075E54; border-bottom: 3px solid #25D366; padding-bottom: 8px; }
+h2 { font-size: 16pt; color: #075E54; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+h3 { font-size: 13pt; color: #128C7E; margin-top: 18px; }
+p { margin: 6px 0; line-height: 1.4; }
+.code { background: #f0f0f0; font-family: Consolas, monospace; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 10px; border-left: 4px solid #25D366; font-family: Consolas, monospace; font-size: 10pt; }
+ul { margin: 4px 0; }
+li { margin: 3px 0; }
+.note { background: #FFF3CD; border-left: 4px solid #FFC107; padding: 10px; margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+td, th { border: 1px solid #ccc; padding: 6px; text-align: left; }
+th { background: #075E54; color: white; }
+</style>
+</head>
+<body>
+
+<h1>GUIA COMPLETA DEL BOT DE WHATSAPP</h1>
+
+<h2>1. QUE HACE ESTE BOT?</h2>
+<p>Es un bot de WhatsApp que escucha mensajes enviados directamente al numero del bot (mensajes directos, NO de grupos). Cuando alguien le escribe, analiza el texto y lo reenvia automaticamente al grupo correspondiente segun las palabras clave que detecte.</p>
+
+<p><b>Ejemplo:</b></p>
+<ul>
+<li>Si alguien escribe "tengo problema con el internet" &rarr; lo reenvia al grupo <b>SOPORTE CTA</b></li>
+<li>Si alguien escribe "se descompuso el bano" &rarr; lo reenvia al grupo <b>SERVICIOS GENERALES</b></li>
+</ul>
+
+<p><b>Categorias actuales:</b></p>
+<ul>
+<li><b>SOPORTE CTA:</b> internet, wifi, cable, HDMI, TV, telefono, etc.</li>
+<li><b>SERVICIOS GENERALES:</b> luz, agua, plomeria, mantenimiento, etc.</li>
+</ul>
+
+<h2>2. ESTRUCTURA DEL PROYECTO</h2>
+<pre>
+bot/
+  |- index.js           -> Bot principal (produccion)
+  |- ids.js             -> Script para obtener IDs de grupos
+  |- package.json       -> Configuracion y dependencias
+  |- node_modules/      -> Dependencias (no subir a GitHub)
+  |- auth/              -> Sesion de WhatsApp (NO subir a GitHub)
+  |- GUIA.docx          -> Este documento
+</pre>
+<div class="note"><b>IMPORTANTE:</b> La carpeta <code>auth/</code> contiene tu sesion de WhatsApp. Nunca la subas a GitHub o la compartas.</div>
+
+<h2>3. EXPLICACION DEL CODIGO (index.js)</h2>
+
+<h3>a) Conexion con WhatsApp</h3>
+<p>Usa la libreria <code>@whiskeysockets/baileys</code>. La funcion <code>useMultiFileAuthState("auth")</code> guarda la sesion en la carpeta <code>auth/</code> para no tener que escanear QR cada vez que se inicia el bot.</p>
+
+<h3>b) Grupos de destino</h3>
+<p>Se definen los IDs de los grupos a los que se reenviaran los mensajes con formato: <code>numero@g.us</code></p>
+
+<h3>c) Reglas de palabras clave</h3>
+<p>Cada regla tiene: nombre (identificador de la categoria), grupo (ID del grupo destino) y keywords (lista de palabras que activan el reenvio).</p>
+
+<h3>d) Evento messages.upsert</h3>
+<p>Se dispara cuando llega un mensaje nuevo. Ignora mensajes de grupos, convierte el texto a minusculas para comparar, recorre las reglas buscando coincidencias y reenvia al grupo correspondiente incluyendo el nombre de quien reporta.</p>
+
+<h2>4. REQUISITOS</h2>
+<ul>
+<li>Windows, Linux o Mac</li>
+<li>Node.js version 18 o superior</li>
+<li>Conexion a internet</li>
+<li>Un telefono con WhatsApp para escanear el codigo QR</li>
+<li>El numero del bot debe estar agregado a los grupos de destino</li>
+</ul>
+
+<h2>5. COMO EJECUTARLO EN TU PC</h2>
+
+<h3>Paso 1: Abrir terminal</h3>
+<p>En la carpeta del proyecto, abre PowerShell o Símbolo del sistema.</p>
+
+<h3>Paso 2: Instalar dependencias</h3>
+<pre>npm install</pre>
+
+<h3>Paso 3: Iniciar el bot</h3>
+<pre>node index.js</pre>
+
+<h3>Paso 4: Escanear QR</h3>
+<p>La primera vez aparecera un codigo QR en la terminal. Abre WhatsApp en tu telefono, ve a <b>Menú &gt; Dispositivos vinculados &gt; Vincular dispositivo</b> y escanea el QR.</p>
+
+<h3>Paso 5: Probar el bot</h3>
+<p>Desde <b>OTRO número</b> de WhatsApp, envía un mensaje directo al número del bot.</p>
+<p>Ejemplo: <code>hola, tengo un problema con el internet</code></p>
+<p>El bot lo reenviará al grupo correspondiente.</p>
+
+<h3>Paso 6: Detener el bot</h3>
+<p>Presiona <b>Ctrl + C</b> en la terminal.</p>
+
+<h2>6. COMO MONTARLO EN UN SERVIDOR</h2>
+
+<h3>Paso 1: Subir a GitHub</h3>
+<p>Crea un repositorio en GitHub. Antes de subir, crea un archivo <code>.gitignore</code> con:</p>
+<pre>
+node_modules/
+auth/
+</pre>
+<p>Luego ejecuta:</p>
+<pre>
+git init
+git add .
+git commit -m "Primer commit"
+git remote add origin https://github.com/tuusuario/mi-bot.git
+git push -u origin main
+</pre>
+
+<h3>Paso 2: Conectarte al servidor via SSH</h3>
+<pre>ssh usuario@ip-del-servidor</pre>
+
+<h3>Paso 3: Instalar Node.js en el servidor</h3>
+<p>En Ubuntu/Debian:</p>
+<pre>
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node --version   # debe mostrar v20+
+</pre>
+
+<h3>Paso 4: Clonar el repositorio e instalar</h3>
+<pre>
+git clone https://github.com/tuusuario/mi-bot.git
+cd mi-bot
+npm install
+</pre>
+
+<h3>Paso 5: Copiar sesion de WhatsApp (opcional)</h3>
+<p>Desde tu PC (donde ya escaneaste el QR):</p>
+<pre>scp -r auth/ usuario@ip-del-servidor:~/mi-bot/</pre>
+<p>Si no haces esto, tendras que escanear QR de nuevo en el servidor.</p>
+
+<h3>Paso 6: Instalar PM2 (gestor de procesos)</h3>
+<p>PM2 mantiene el bot corriendo 24/7 y lo reinicia si se cae:</p>
+<pre>
+npm install -g pm2
+pm2 start index.js --name bot-whatsapp
+pm2 save
+pm2 startup
+</pre>
+
+<h3>Paso 7: Verificar que funciona</h3>
+<pre>
+pm2 status              # debe mostrar "online"
+pm2 logs bot-whatsapp   # muestra los logs en vivo
+</pre>
+
+<h2>7. COMANDOS UTILES CON PM2</h2>
+<table>
+<tr><th>Comando</th><th>Descripcion</th></tr>
+<tr><td><code>pm2 status</code></td><td>Ver estado de todos los procesos</td></tr>
+<tr><td><code>pm2 logs bot-whatsapp</code></td><td>Ver logs del bot en vivo</td></tr>
+<tr><td><code>pm2 restart bot-whatsapp</code></td><td>Reiniciar el bot</td></tr>
+<tr><td><code>pm2 stop bot-whatsapp</code></td><td>Detener el bot</td></tr>
+<tr><td><code>pm2 delete bot-whatsapp</code></td><td>Eliminar el proceso</td></tr>
+<tr><td><code>pm2 monit</code></td><td>Monitor en tiempo real (CPU, RAM)</td></tr>
+</table>
+
+<h2>8. PREGUNTAS FRECUENTES</h2>
+
+<h3>&iquest;Puedo tener el bot en PC y servidor a la vez?</h3>
+<p><b>No.</b> La sesion de WhatsApp solo puede estar activa en un lugar a la vez. Si corres el bot en el servidor, deten el de tu PC.</p>
+
+<h3>&iquest;C&oacute;mo obtengo IDs de grupos nuevos?</h3>
+<p>Ejecuta <code>node ids.js</code>, luego envía un mensaje en el grupo desde WhatsApp. El bot mostrará: <code>GRUPO: 1234567890@g.us</code>. Ese es el ID que debes poner en <code>index.js</code>.</p>
+
+<h3>&iquest;C&oacute;mo agrego una nueva categor&iacute;a?</h3>
+<p>En <code>index.js</code>, agrega un nuevo objeto al array <code>reglas</code>:</p>
+<pre>
+{
+    nombre: "MI CATEGORIA",
+    grupo: "ID_DEL_GRUPO@g.us",
+    keywords: ["palabra1", "palabra2", "palabra3"]
+}
+</pre>
+
+<h3>&iquest;Qu&eacute; hago si el bot se desconecta?</h3>
+<p>Con PM2 se reinicia solo automaticamente. Si el error persiste, probablemente la sesion expir&oacute;. Borra la carpeta <code>auth/</code> y ejecuta el bot de nuevo para escanear otro QR.</p>
+
+<h3>&iquest;C&oacute;mo actualizar el bot?</h3>
+<pre>
+git pull
+pm2 restart bot-whatsapp
+</pre>
+
+<h3>&iquest;Se puede usar con otro n&uacute;mero?</h3>
+<p>S&iacute;. Borra la carpeta <code>auth/</code>, ejecuta el bot y escanea con el nuevo n&uacute;mero.</p>
+
+<h3>&iquest;El bot lee mensajes de grupos?</h3>
+<p><b>No.</b> El bot ignora mensajes de grupos. Solo procesa mensajes directos al n&uacute;mero del bot.</p>
+
+</body>
+</html>

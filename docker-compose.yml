@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    container_name: whatsapp-bot
+    restart: unless-stopped
+    volumes:
+      - ./auth:/app/auth
+    environment:
+      - TZ=America/Mexico_City

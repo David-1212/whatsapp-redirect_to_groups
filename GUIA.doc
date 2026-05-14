@@ -1,0 +1,240 @@
+GUÍA COMPLETA DEL BOT DE WHATSAPP
+====================================
+
+ÍNDICE
+-------
+1. ¿Qué hace este bot?
+2. Estructura del proyecto
+3. Explicación del código
+4. Requisitos
+5. Cómo ejecutarlo en tu PC
+6. Cómo montarlo en un servidor
+7. Preguntas frecuentes
+
+
+1. ¿QUÉ HACE ESTE BOT?
+------------------------
+Es un bot de WhatsApp que escucha mensajes enviados directamente al
+número del bot (mensajes directos, NO de grupos). Cuando alguien le
+escribe, analiza el texto y lo reenvía automáticamente al grupo
+correspondiente según las palabras clave que detecte.
+
+Ejemplo:
+- Si alguien escribe "tengo problema con el internet" → lo reenvía
+  al grupo "SOPORTE CTA"
+- Si alguien escribe "se descompuso el baño" → lo reenvía al grupo
+  "SERVICIOS GENERALES"
+
+Actualmente tiene 2 categorías:
+- SOPORTE CTA: internet, wifi, cable, HDMI, TV, teléfono, etc.
+- SERVICIOS GENERALES: luz, agua, plomería, mantenimiento, etc.
+
+
+2. ESTRUCTURA DEL PROYECTO
+---------------------------
+bot/
+  ├── index.js        → Bot principal (el que se usa en producción)
+  ├── ids.js          → Script auxiliar para obtener IDs de grupos
+  ├── ids.txt         → (opcional) Versión anterior del script de IDs
+  ├── index.js.txt    → Copia de respaldo de index.js
+  ├── package.json    → Configuración del proyecto y dependencias
+  ├── package-lock.json → Bloqueo de versiones de dependencias
+  ├── node_modules/   → Dependencias instaladas (no subir a GitHub)
+  ├── auth/           → Sesión de WhatsApp (NO subir a GitHub)
+  └── DEPLOY.md       → Guía rápida de despliegue
+
+
+3. EXPLICACIÓN DEL CÓDIGO (index.js)
+-------------------------------------
+
+a) Importaciones:
+   import qrcode from "qrcode-terminal";
+
+   Solo importa la librería para mostrar el código QR en la terminal.
+
+b) Conexión con WhatsApp:
+   - Usa la librería @whiskeysockets/baileys
+   - useMultiFileAuthState("auth") guarda la sesión en la carpeta auth/
+     para no tener que escanear QR cada vez
+   - fetchLatestBaileysVersion() obtiene la versión más reciente del
+     protocolo de WhatsApp
+
+c) Grupos de destino:
+   const GRUPOS = {
+       CTA: "120363024888095178@g.us",
+       SERVICIOS: "120363426639499760@g.us"
+   };
+   Aquí se definen los IDs de los grupos a los que se reenviarán
+   los mensajes.
+
+d) Reglas de palabras clave:
+   const reglas = [ ... ];
+   Cada regla tiene:
+   - nombre: cómo se identifica la categoría
+   - grupo: a qué grupo reenviar
+   - keywords: lista de palabras que activan esta regla
+
+e) Evento connection.update:
+   - Muestra el código QR cuando es necesario
+   - Indica cuando el bot se conecta o desconecta
+
+f) Evento messages.upsert:
+   - Se dispara cuando llega un mensaje nuevo
+   - Ignora mensajes de grupos (solo escucha DMs)
+   - Convierte el texto a minúsculas para comparar
+   - Recorre las reglas buscando coincidencias
+   - Si encuentra una, reenvía el mensaje al grupo correspondiente
+   - Incluye el nombre de quien reporta y el texto original
+
+
+4. REQUISITOS
+--------------
+- Windows, Linux o Mac
+- Node.js versión 18 o superior
+- Conexión a internet
+- Un teléfono con WhatsApp para escanear el QR
+- El número del bot debe estar agregado a los grupos de destino
+
+
+5. CÓMO EJECUTARLO EN TU PC
+-----------------------------
+
+PASO 1: Abrir terminal
+   En la carpeta del proyecto, abre PowerShell, CMD o terminal.
+
+PASO 2: Instalar dependencias (solo la primera vez)
+   npm install
+
+PASO 3: Iniciar el bot
+   node index.js
+
+PASO 4: Escanear el código QR
+   - La primera vez aparecerá un código QR en la terminal
+   - Abre WhatsApp en tu teléfono
+   - Ve a Menú > Dispositivos vinculados > Vincular dispositivo
+   - Escanea el QR
+   - El bot se conectará automáticamente
+
+PASO 5: Probar el bot
+   - Desde OTRO número de WhatsApp, envía un mensaje directo
+     al número del bot
+   - Ejemplo: "hola, tengo un problema con el internet"
+   - El bot lo reenviará al grupo SOPORTE CTA
+   - En la terminal verás los logs del mensaje
+
+PASO 6: Detener el bot
+   - Presiona Ctrl + C en la terminal
+
+
+6. CÓMO MONTARLO EN UN SERVIDOR
+--------------------------------
+
+PASO 1: Subir el código a GitHub
+   - Crea un repositorio en GitHub
+   - Antes de subir, crea un archivo .gitignore con:
+       node_modules/
+       auth/
+   - Ejecuta:
+       git init
+       git add .
+       git commit -m "Primer commit"
+       git remote add origin https://github.com/tuusuario/mi-bot.git
+       git push -u origin main
+
+PASO 2: Conectarte al servidor
+   - Necesitas un VPS (DigitalOcean, AWS EC2, Linode, etc.)
+   - Conéctate via SSH:
+       ssh usuario@ip-del-servidor
+
+PASO 3: Instalar Node.js en el servidor
+   En servidores Linux (Ubuntu/Debian):
+       curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+       sudo apt install -y nodejs
+       node --version   # debe mostrar v20+
+
+PASO 4: Clonar el repositorio
+       git clone https://github.com/tuusuario/mi-bot.git
+       cd mi-bot
+       npm install
+
+PASO 5: Copiar la sesión de WhatsApp (opcional pero recomendado)
+   Desde tu PC (donde ya escaneaste el QR):
+       scp -r auth/ usuario@ip-del-servidor:~/mi-bot/
+
+   Si no haces esto, tendrás que escanear QR de nuevo en el servidor.
+
+PASO 6: Instalar PM2 (gestor de procesos)
+   PM2 mantiene el bot corriendo 24/7 y lo reinicia si se cae.
+       npm install -g pm2
+       pm2 start index.js --name bot-whatsapp
+       pm2 save
+       pm2 startup
+
+   El comando "pm2 startup" hará que el bot inicie automáticamente
+   cuando el servidor se reinicie.
+
+PASO 7: Verificar que funciona
+       pm2 status             → debe mostrar "online"
+       pm2 logs bot-whatsapp  → muestra los logs en vivo
+
+PASO 8: Probar
+   - Envía un mensaje al número del bot desde WhatsApp
+   - Verás el mensaje aparecer en los logs del servidor
+
+
+7. COMANDOS ÚTILES CON PM2
+----------------------------
+   pm2 status               → Ver estado de todos los procesos
+   pm2 logs bot-whatsapp    → Ver logs del bot
+   pm2 restart bot-whatsapp → Reiniciar el bot
+   pm2 stop bot-whatsapp    → Detener el bot
+   pm2 delete bot-whatsapp  → Eliminar el proceso
+   pm2 list                 → Listar procesos
+   pm2 monit                → Monitor en tiempo real (CPU, RAM)
+
+
+8. PREGUNTAS FRECUENTES
+-------------------------
+
+¿Puedo tener el bot en mi PC y servidor a la vez?
+   No. La sesión de WhatsApp solo puede estar activa en un lugar
+   a la vez. Si corres el bot en el servidor, detén el de tu PC.
+
+¿Cómo obtengo IDs de grupos nuevos?
+   Ejecuta:
+       node ids.js
+   Luego envía un mensaje en el grupo desde WhatsApp. El bot
+   mostrará: 👥 GRUPO: 1234567890@g.us
+   Ese es el ID que debes poner en index.js.
+
+¿Cómo agrego una nueva categoría?
+   En index.js, agrega un nuevo objeto al array "reglas":
+   {
+       nombre: "MI CATEGORIA",
+       grupo: "ID_DEL_GRUPO@g.us",
+       keywords: ["palabra1", "palabra2", "palabra3"]
+   }
+   Y también agrega el ID al objeto GRUPOS.
+
+¿Qué hago si el bot se desconecta?
+   Con pm2 se reinicia solo automáticamente. Si el error persiste,
+   probablemente la sesión expiró. Borra la carpeta auth/ y
+   ejecuta el bot de nuevo para escanear otro QR.
+
+¿Cómo actualizar el bot?
+   En el servidor:
+       git pull
+       pm2 restart bot-whatsapp
+
+¿Se puede usar con otro número?
+   Sí. Borra la carpeta auth/, ejecuta el bot y escanea con
+   el nuevo número.
+
+¿Qué hago si aparece "Connection Failure"?
+   Espera unos segundos, pm2 lo reintentará automáticamente.
+   Si persiste, revisa la conexión a internet del servidor.
+
+¿El bot lee mensajes de grupos?
+   No. El bot ignora mensajes de grupos (línea 114 del código:
+   if (from.endsWith("@g.us")) return;). Solo procesa mensajes
+   directos al número del bot.
