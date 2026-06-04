@@ -2,8 +2,8 @@ services:
   bot:
     build: .
     container_name: whatsapp-bot
-    restart: unless-stopped
+    stdin_open: true
+    tty: true
     volumes:
       - ./auth:/app/auth
-    environment:
-      - TZ=America/Mexico_City
+    restart: unless-stopped

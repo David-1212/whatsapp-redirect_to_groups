@@ -1,17 +1,12 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-RUN apk add --no-cache git
-
-COPY package*.json ./
-
+COPY package.json package-lock.json ./
 RUN npm install
 
 COPY . .
 
-RUN rm -rf auth node_modules/.cache
-
-EXPOSE 3000
+VOLUME /app/auth
 
 CMD ["node", "index.js"]

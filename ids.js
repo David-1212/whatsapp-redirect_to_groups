@@ -1,4 +1,5 @@
 import qrcode from "qrcode-terminal";
+import { DisconnectReason } from "@whiskeysockets/baileys";
 
 async function start() {
     const baileys = await import("@whiskeysockets/baileys");
@@ -11,11 +12,12 @@ async function start() {
     const sock = makeWASocket({
         version,
         auth: state,
+        printQRInTerminal: false,
         browser: ["Windows", "Chrome", "1.0.0"]
     });
 
     sock.ev.on("connection.update", (update) => {
-        const { connection, qr } = update;
+        const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
             console.log("📱 ESCANEA ESTE QR:");
@@ -27,7 +29,13 @@ async function start() {
         }
 
         if (connection === "close") {
-            console.log("❌ DESCONECTADO...");
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            if (statusCode === DisconnectReason.restartRequired) {
+                console.log("🔄 Reconectando...");
+                start();
+            } else {
+                console.log("❌ DESCONECTADO...");
+            }
         }
     });
 

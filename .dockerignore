@@ -1,8 +1,5 @@
-node_modules/
-auth/
+node_modules
+auth
 .git
+.gitignore
 *.md
-GUIA.docx
-GUIA.doc
-index.js.txt
-ids.txt

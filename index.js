@@ -1,5 +1,7 @@
 import qrcode from "qrcode-terminal";
-import { downloadContentFromMessage } from "@whiskeysockets/baileys";
+import { downloadContentFromMessage, DisconnectReason } from "@whiskeysockets/baileys";
+
+const GRUPO_DESTINO = "120363408618750412@g.us";
 
 async function start() {
     const baileys = await import("@whiskeysockets/baileys");
@@ -12,83 +14,20 @@ async function start() {
     const sock = makeWASocket({
         version,
         auth: state,
+        printQRInTerminal: false,
         browser: ["Windows", "Chrome", "1.0.0"]
     });
 
-    const GRUPOS = {
-        CTA: "120363024888095178@g.us",
-        SERVICIOS: "120363426639499760@g.us"
-    };
+    const contactos = {};
 
-    const reglas = [
-        {
-            nombre: "SOPORTE CTA",
-            grupo: GRUPOS.CTA,
-            keywords: [
-                "internet", "wifi", "red", "conexion", "switch", "cta",
-                "cable", "modem", "router", "señal", "telefonia", "linea",
-                "telefono", "llamada", "lento",
-                "velocidad", "fibra", "coaxial", "television", "tv",
-                "reporte", "tecnico", "configuracion","apagado",
-                "reiniciar", "cftv",
-                "hdmi", "puerto", "pantalla", "monitor", "display",
-                "video", "hd", "4k", "resolucion", "imagen",
-                "puerto de red", "solucion hdmi",
-                "usb", "vga", "dvi", "adaptador", "convertidor",
-                "splitter", "amplificador", "distribuidor", "cableado",
-                "ponchado", "rj45", "cat5", "cat6", "fibra optica",
-                "repetidor", "access point", "ap",
-                "puente", "malla", "vpn", "dhcp", "dns", "ip",
-                "gateway", "ping", "latencia", "paquete", "perdida",
-                "intermitente", "desconecta", "se cae", "laguea",
-                "streaming", "netflix", "spotify", "youtube",
-                "whatsapp", "navegador", "correo", "outlook",
-                "zoom", " teams", " meet", "no prende", "no enciende",
-                "sin imagen", "sin video", "sin señal", "se apaga",
-                "parpadea", "enciende", "apagar", "prende",
-                "control remoto", "bateria", "cargador",
-                "fuente de poder", "voltaje", "regulador",
-                "no hay internet", "sin internet", "no carga",
-                "lentitud", "congelado", "se traba", "no abre",
-                "error", "codigo de error", "configurar","camaras"
-            ]
-        },
-        {
-            nombre: "SERVICIOS GENERALES",
-            grupo: GRUPOS.SERVICIOS,
-            keywords: [
-                "luz", "agua", "baño", "mantenimiento", "limpieza",
-                "drenaje", "tuberia", "gotera", "fuga", "corto","sucio",
-                "electricidad", "contacto", "apagador", "ventilador",
-                "clima", "aire", "refrigeracion", "pintura", "plomero",
-                "cerrajero", "vidrio", "poda", "jardin", "basura","registro",
-                "fumigacion", "desperfecto",
-                "daño", "cisterna", "bomba", "tanque","plafon","plafón",
-                "filtracion","filtración", "humedad", "goteras", "plomeria",
-                "electricista", "carpinteria", "herreria", "soldadura",
-                "albañil", "albañileria", "azulejo", "loseta", "piso",
-                "pared", "techo", "losa", "block", "cemento", "arena",
-                "herreria", "cancel", "ventana", "puerta", "chapa",
-                "candado", "llave", "cerradura", "bisagra",
-                "cortina", "persiana", "toldo", "mosquitero",
-                "tinaco", "boiler", "calentador", "gas",
-                "valvula", "llave de paso", "medidor",
-                "purificador", "filtro", "sedimentos",
-                "azulejo", "grieta", "cuarteadura", "desague",
-                "registro", "coladera", "sifon", "bajo de agua",
-                "inundacion", "anegado", "encharcado",
-                "foco", "lampara", "luminario", "balastra",
-                "interruptor", "termico", "pastilla",
-                "no hay luz", "sin luz", "sin agua",
-                "tapa", "asa", "manija", "jaladera",
-                "rejilla", "respirador", "extractor",
-                "campana", "horno", "estufa", "refrigerador"
-            ]
+    sock.ev.on("contacts.upsert", (upserted) => {
+        for (const c of upserted) {
+            contactos[c.jid] = c;
         }
-    ];
+    });
 
     sock.ev.on("connection.update", (update) => {
-        const { connection, qr } = update;
+        const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
             console.log("📱 ESCANEA ESTE QR:");
@@ -100,7 +39,13 @@ async function start() {
         }
 
         if (connection === "close") {
-            console.log("❌ DESCONECTADO...");
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            if (statusCode === DisconnectReason.restartRequired) {
+                console.log("🔄 Reconectando...");
+                start();
+            } else {
+                console.log("❌ DESCONECTADO...");
+            }
         }
     });
 
@@ -109,9 +54,15 @@ async function start() {
         if (!msg.message) return;
 
         const from = msg.key.remoteJid;
-        const nombre = msg.pushName || msg.key.participant || from;
+        const nombre = msg.pushName || "";
 
         if (from.endsWith("@g.us")) return;
+
+        let numero = "";
+        const senderJid = contactos[from]?.jid || from;
+        if (senderJid.includes("@s.whatsapp.net")) {
+            numero = senderJid.split("@")[0].replace(/:.*/, "");
+        }
 
         const type = Object.keys(msg.message)[0];
         const texto =
@@ -122,51 +73,55 @@ async function start() {
             msg.message.documentMessage?.caption ||
             "";
 
-        const textoLower = texto.toLowerCase();
+        console.log(`📩 Mensaje de ${nombre}: ${texto}`);
 
-        console.log("📩 Mensaje:", texto);
+        const header = `📌 *Nuevo mensaje*\n👤 *${nombre}*`;
 
-        for (const regla of reglas) {
-            if (regla.keywords.some(k => textoLower.includes(k))) {
-                console.log(`➡️ Enviando a ${regla.nombre}`);
-
-                const header = `📌 *Nuevo reporte (${regla.nombre})*\n👤 *${nombre}*`;
-
-                if (type === "conversation" || type === "extendedTextMessage") {
-                    await sock.sendMessage(regla.grupo, {
-                        text: `${header}\n💬 ${texto}`
-                    });
-                } else {
-                    await sock.sendMessage(regla.grupo, {
-                        text: header
-                    });
-
-                    if (type === "imageMessage") {
-                        const stream = await downloadContentFromMessage(msg.message.imageMessage, "image");
-                        const buffer = [];
-                        for await (const chunk of stream) buffer.push(chunk);
-                        await sock.sendMessage(regla.grupo, {
-                            image: Buffer.concat(buffer),
-                            caption: texto || null
-                        });
-                    } else if (type === "videoMessage") {
-                        const stream = await downloadContentFromMessage(msg.message.videoMessage, "video");
-                        const buffer = [];
-                        for await (const chunk of stream) buffer.push(chunk);
-                        await sock.sendMessage(regla.grupo, {
-                            video: Buffer.concat(buffer),
-                            caption: texto || null
-                        });
-                    } else {
-                        await sock.sendMessage(regla.grupo, { forward: msg });
-                    }
-                }
-
-                return;
-            }
+        if (type === "conversation" || type === "extendedTextMessage") {
+            await sock.sendMessage(GRUPO_DESTINO, {
+                text: `${header}\n💬 ${texto}`
+            });
+        } else if (type === "imageMessage") {
+            await sock.sendMessage(GRUPO_DESTINO, { text: header });
+            const stream = await downloadContentFromMessage(msg.message.imageMessage, "image");
+            const buffer = [];
+            for await (const chunk of stream) buffer.push(chunk);
+            await sock.sendMessage(GRUPO_DESTINO, {
+                image: Buffer.concat(buffer),
+                caption: texto || null
+            });
+        } else if (type === "videoMessage") {
+            await sock.sendMessage(GRUPO_DESTINO, { text: header });
+            const stream = await downloadContentFromMessage(msg.message.videoMessage, "video");
+            const buffer = [];
+            for await (const chunk of stream) buffer.push(chunk);
+            await sock.sendMessage(GRUPO_DESTINO, {
+                video: Buffer.concat(buffer),
+                caption: texto || null
+            });
+        } else if (type === "audioMessage") {
+            await sock.sendMessage(GRUPO_DESTINO, { text: header });
+            const stream = await downloadContentFromMessage(msg.message.audioMessage, "audio");
+            const buffer = [];
+            for await (const chunk of stream) buffer.push(chunk);
+            await sock.sendMessage(GRUPO_DESTINO, {
+                audio: Buffer.concat(buffer),
+                mimetype: msg.message.audioMessage.mimetype
+            });
+        } else if (type === "documentMessage") {
+            await sock.sendMessage(GRUPO_DESTINO, { text: header });
+            const stream = await downloadContentFromMessage(msg.message.documentMessage, "document");
+            const buffer = [];
+            for await (const chunk of stream) buffer.push(chunk);
+            await sock.sendMessage(GRUPO_DESTINO, {
+                document: Buffer.concat(buffer),
+                mimetype: msg.message.documentMessage.mimetype,
+                fileName: msg.message.documentMessage.fileName
+            });
+        } else {
+            await sock.sendMessage(GRUPO_DESTINO, { text: `${header}\n🔄 *Tipo:* ${type}` });
+            await sock.sendMessage(GRUPO_DESTINO, { forward: msg });
         }
-
-        console.log("❌ No se encontró categoría");
     });
 
     sock.ev.on("creds.update", saveCreds);
