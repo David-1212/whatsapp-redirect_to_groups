@@ -1,7 +1,7 @@
 import qrcode from "qrcode-terminal";
 import { downloadContentFromMessage, DisconnectReason } from "@whiskeysockets/baileys";
 
-const GRUPO_DESTINO = "120363408618750412@g.us";
+const GRUPO_DESTINO = "120363024888095178@g.us";
 
 async function start() {
     const baileys = await import("@whiskeysockets/baileys");
@@ -52,6 +52,7 @@ async function start() {
     sock.ev.on("messages.upsert", async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message) return;
+        if (msg.key.fromMe) return;
 
         const from = msg.key.remoteJid;
         const nombre = msg.pushName || "";
